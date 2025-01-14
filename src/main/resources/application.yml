@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: safaricomTopupIntegration
+server:
+  ssl:
+    enabled: true
+    trust-store: classpath:keystore.jks
+    trust-store-password: changeit
+api:
+  token:
+    url: https://102.218.49.85:7001/v1/token
+    ttl:
+      minutes: 10
+  username: PRETUPS
+  password: MRyhsEPWzO8jDqaE0EAKnw==
+
+
+
+
+
+
