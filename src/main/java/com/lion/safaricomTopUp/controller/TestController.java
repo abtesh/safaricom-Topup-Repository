@@ -15,9 +15,11 @@ public class TestController {
 
     private final TokenService tokenService;
 
+    private String correlationId;
+
     @GetMapping("/token")
     public ResponseEntity<String> testToken() {
-        String token = tokenService.getToken();
+        String token = tokenService.getToken("1234");
         if (token != null) {
             return ResponseEntity.ok("Token retrieved successfully: " + token);
         } else {

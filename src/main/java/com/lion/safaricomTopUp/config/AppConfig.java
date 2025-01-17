@@ -1,34 +1,82 @@
 package com.lion.safaricomTopUp.config;
 
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
-import org.apache.hc.client5.http.ssl.TrustSelfSignedStrategy;
-import org.apache.hc.core5.ssl.SSLContextBuilder;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.web.reactive.function.client.ExchangeFilterFunctions;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.netty.http.client.HttpClient;
 
-import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.File;
+import java.io.FileInputStream;
+import java.security.KeyStore;
 
 @Configuration
 public class AppConfig {
+
+    @Value("${api.username}")
+    private String username;
+
+    @Value("${api.password}")
+    private String password;
+
+    @Value("${api.base-url}")
+    private String baseUrl;
+
+    @Value("${dxl.trust-store}")
+    private String trustStoreLocation;
+
+    @Value("${dxl.password}")
+    private String trustStorePassword;
+
     @Bean
-    public RestTemplate restTemplate() throws Exception {
-        // Build an SSL context that trusts all certificates (for development purposes only)
-        SSLContext sslContext = SSLContextBuilder.create()
-                .loadTrustMaterial(new TrustSelfSignedStrategy()) // Trust self-signed certificates
+    public WebClient.Builder webClientBuilder() throws Exception {
+        // Create the HttpClient with SSL configuration
+        HttpClient httpClient = createHttpClientWithTrustStore();
+
+        // Return the WebClient builder with the custom HTTP client
+        return WebClient.builder()
+                .baseUrl(baseUrl) // Set your base URL here
+                .clientConnector(new ReactorClientHttpConnector(httpClient)) // Use custom HttpClient with SSL
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .filter(ExchangeFilterFunctions.basicAuthentication(username, password)) // Optional basic auth filter
+                .defaultHeader("x-source-system", "STEP")
+                .defaultHeader("x-source-identity-token", "U2FmYXJpY29tOmUyZTplc2JldDpBdXRvbWF0aW9u");
+    }
+
+    // Method to create HttpClient with the TrustStore
+    private HttpClient createHttpClientWithTrustStore() throws Exception {
+        // Load the trust store (PKCS12 format)
+        File trustStoreFile = new File(trustStoreLocation);
+        char[] trustStorePasswordNew = trustStorePassword.toCharArray();
+
+        // Load the certificates from the trust store
+        KeyStore keyStore = KeyStore.getInstance("PKCS12");
+        try (FileInputStream trustStoreStream = new FileInputStream(trustStoreFile)) {
+            keyStore.load(trustStoreStream, trustStorePasswordNew);
+        }
+
+        // Create TrustManagerFactory with the loaded TrustStore
+        TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        trustManagerFactory.init(keyStore);
+
+        // Create SSLContext using the TrustManagerFactory
+        javax.net.ssl.SSLContext sslContext = javax.net.ssl.SSLContext.getInstance("TLS");
+        sslContext.init(null, trustManagerFactory.getTrustManagers(), null);
+
+        // Use SslContextBuilder to build SslContext for Netty
+        SslContext nettySslContext = SslContextBuilder.forClient()
+                .trustManager(trustManagerFactory)  // Use the TrustManagerFactory
                 .build();
 
-        CloseableHttpClient httpClient = HttpClients.custom()
-                .setSSLContext(sslContext)
-                .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE) // Disable hostname verification
-                .build();
-
-
-        // Use the custom HTTP client in a RestTemplate
-        HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory(httpClient);
-        return new RestTemplate(factory);
+        // Create and return the HttpClient with the SSLContext
+        return HttpClient.create()
+                .secure(ssl -> ssl.sslContext(nettySslContext));  // Pass the Netty SslContext to HttpClient
     }
 }
