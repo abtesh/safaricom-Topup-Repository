@@ -1,3 +1,66 @@
+//package com.lion.safaricomTopUp.config;
+//
+//import io.netty.channel.ChannelOption;
+//import io.netty.handler.ssl.SslContextBuilder;
+//import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+//import org.springframework.context.annotation.Bean;
+//import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+//import org.springframework.web.reactive.function.client.WebClient;
+//import reactor.netty.http.client.HttpClient;
+//
+//import javax.net.ssl.SSLException;
+//import java.time.Duration;
+//
+//public class WebClientConfig {
+//
+//    @Bean
+//    public WebClient.Builder webClientBuilder() {
+//
+//        HttpClient httpClient = HttpClient.create()
+//                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 15000)  // Set connection timeout to 15 seconds
+//                .responseTimeout(Duration.ofSeconds(15))
+//                .secure(sslContextSpec -> {
+//                    try {
+//                        sslContextSpec.sslContext(
+//                                SslContextBuilder.forClient()
+//                                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+//                                        .build());
+//                    } catch (SSLException e) {
+//                        throw new RuntimeException(e);
+//                    }
+//                });
+//
+//        return WebClient.builder()
+//                .clientConnector(new ReactorClientHttpConnector(httpClient));
+//    }
+//
+//}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 package com.lion.safaricomTopUp.config;
 
 import io.netty.handler.ssl.SslContext;
@@ -45,9 +108,9 @@ public class AppConfig {
                 .baseUrl(baseUrl) // Set your base URL here
                 .clientConnector(new ReactorClientHttpConnector(httpClient)) // Use custom HttpClient with SSL
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .filter(ExchangeFilterFunctions.basicAuthentication(username, password)) // Optional basic auth filter
-                .defaultHeader("x-source-system", "STEP")
-                .defaultHeader("x-source-identity-token", "U2FmYXJpY29tOmUyZTplc2JldDpBdXRvbWF0aW9u");
+                .filter(ExchangeFilterFunctions.basicAuthentication(username, password)); // Optional basic auth filter
+//                .defaultHeader("x-source-system", "STEP")
+//                .defaultHeader("x-source-identity-token", "U2FmYXJpY29tOmUyZTplc2JldDpBdXRvbWF0aW9u");
     }
 
     // Method to create HttpClient with the TrustStore

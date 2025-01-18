@@ -28,24 +28,23 @@ public class TokenService {
 
     private static final String TOKEN_KEY = "api_token";
 
-    public String getToken(String correlationId) {
-        try {
+    public Mono<String> getToken(String correlationId) {
             String token = stringRedisTemplate.opsForValue().get(TOKEN_KEY);
             if (token != null) {
-                return token;
+                return Mono.just(token);
             }
 
             // Call generate token API with correlation ID
-            TokenResponse tokenResponse = generateToken(correlationId).block(); // Using block() to get the result
-            if (tokenResponse != null && tokenResponse.getToken() != null) {
-                token = tokenResponse.getToken();
-                stringRedisTemplate.opsForValue().set(TOKEN_KEY, token, tokenTtl, TimeUnit.MINUTES);
-                return token;
-            }
-        } catch (Exception e) {
-            log.error("Error occurred while fetching or storing token: {}", e.getMessage());
-        }
-        return null;
+           return this.generateToken(correlationId).flatMap(response -> {
+               if(response!=null && response.getToken()!=null){
+                   stringRedisTemplate.opsForValue().set(TOKEN_KEY, response.getToken(), tokenTtl, TimeUnit.MINUTES);
+                   return Mono.just(response.getToken());
+               }
+               else{
+                   return Mono.empty();
+               }
+           });
+
     }
 
     public Mono<TokenResponse> generateToken(String correlationId) {
@@ -57,7 +56,9 @@ public class TokenService {
         return webClientBuilder.build()
                 .post()
                 .uri(tokenUrl)
-                .header("x-correlation-conversationid", "Lion-" + correlationId) // Dynamic correlation ID
+                .header("x-correlation-conversationid", "Lion-" + correlationId)// Dynamic correlation ID
+                .header("x-source-system", "STEP")
+                .header("x-source-identity-token", "U2FmYXJpY29tOmUyZTplc2JldDpBdXRvbWF0aW9u")
                 .bodyValue(tokenRequest)
                 .retrieve()
                 .bodyToMono(TokenResponse.class)

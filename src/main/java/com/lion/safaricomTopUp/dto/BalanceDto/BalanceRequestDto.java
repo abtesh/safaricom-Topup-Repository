@@ -11,7 +11,7 @@ import java.util.List;
 @NoArgsConstructor
 @Data
 @Builder
-public class BalanceDto {
+public class BalanceRequestDto {
     private String type;
     private List<Id> id;
     private String password;
